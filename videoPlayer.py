@@ -28,9 +28,6 @@ class DisplayingThread(threading.Thread):
         # initialize frame count
         count = 0
         
-        #make sure queue has something
-        time.sleep(.5)
-        
         #get first frame
         frame = displayingQueue.get()
         
@@ -87,8 +84,6 @@ class GreyscalingThread(threading.Thread):
 
     def run(self):
         print("Greyscale is running!")
-        #make sure queue has something
-        time.sleep(.5)
         
         # Initialize frame count 
         count = 0
