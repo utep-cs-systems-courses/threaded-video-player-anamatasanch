@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import threading
-from threading import Thread, Lock
+from threading import Thread
 import cv2
 import numpy as np
 import base64
@@ -9,14 +9,13 @@ from Queue import ThreadyQueue
 import time
 
 # shared queue  
-extractionQueue = ThreadyQueue(30)
 queueSize = 30
+extractionQueue = ThreadyQueue(queueSize)
+displayingQueue = ThreadyQueue(queueSize)
 
-# filename of lip to load
+# filename of clip to load
 global filename
 filename = 'clip.mp4'
-lock = Lock()
-event = threading.Event()
 
 class DisplayingThread(threading.Thread):
     def __init__(self, name=None):
@@ -30,10 +29,10 @@ class DisplayingThread(threading.Thread):
         count = 0
         
         #make sure queue has something
-        time.sleep(1)
+        time.sleep(.5)
         
         #get first frame
-        frame = extractionQueue.get()
+        frame = displayingQueue.get()
         
         while frame != 'End':
             print(f'Displaying frame {count}')        
@@ -45,7 +44,7 @@ class DisplayingThread(threading.Thread):
                 break
 
             count += 1
-            frame = extractionQueue.get()
+            frame = displayingQueue.get()
 
         print('Finished displaying all frames')
         # cleanup the windows
@@ -57,6 +56,8 @@ class ExtractorThread(threading.Thread):
         self.name = name
 
     def run(self):
+        print("Extract is running!")
+        
         # Initialize frame count 
         count = 0
         
@@ -67,26 +68,54 @@ class ExtractorThread(threading.Thread):
         success,image = vidcap.read()
         print(f'Reading frame {count} {success}')
         
-        while success:
-            # get a jpg encoded frame
-            success, jpgImage = cv2.imencode('.jpg', image)
-
-            #encode the frame as base 64 to make debugging easier
-            jpgAsText = base64.b64encode(jpgImage)
-                                    
+        while success:                 
             extractionQueue.put(image)
+            
             count += 1
+            
             success,image = vidcap.read()
+            
             print(f'Reading frame {count} {success}')
             
         print('Frame extraction complete')
         extractionQueue.put('End')
         
+class GreyscalingThread(threading.Thread):
+    def __init__(self, name=None):
+        Thread.__init__(self)
+        self.name = name
 
+    def run(self):
+        print("Greyscale is running!")
+        #make sure queue has something
+        time.sleep(.5)
+        
+        # Initialize frame count 
+        count = 0
+        
+        # read first image
+        colorFrame = extractionQueue.get()
+        
+        while colorFrame != 'End':
+            print(f'Converting frame {count}')
+
+            # convert the image to grayscale
+            grayscaleFrame = cv2.cvtColor(colorFrame, cv2.COLOR_BGR2GRAY)
+                                    
+            displayingQueue.put(grayscaleFrame)
+            count += 1
+            
+            colorFrame = extractionQueue.get()
+            
+        print('Frame greyscaling complete')
+        displayingQueue.put('End')
 
 
 extract = ExtractorThread(name='producer')
 extract.start()
+
+greyscale = GreyscalingThread(name='greyscaling')
+greyscale.start()
 
 display = DisplayingThread(name='consumer')
 display.start()
