@@ -9,7 +9,7 @@ from Queue import ThreadyQueue
 import time
 
 # shared queue  
-queueSize = 30
+queueSize = 10 
 extractionQueue = ThreadyQueue(queueSize)
 displayingQueue = ThreadyQueue(queueSize)
 
