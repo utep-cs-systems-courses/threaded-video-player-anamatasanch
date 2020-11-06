@@ -17,9 +17,9 @@ class ThreadyQueue:
 
     def get(self):
         self.not_empty.acquire()
-        self.queue_spots.release()
         self.lock.acquire()
         item = self.base_q.get()
         self.lock.release()
+        self.queue_spots.release()
         
         return item
